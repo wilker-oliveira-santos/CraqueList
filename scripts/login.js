@@ -32,6 +32,7 @@ function Login(){
 
         if(usuario){
             alert("Seja Bem vindo," + usuario.nome);
+            localStorage.setItem('currentUser', JSON.stringify(usuario));
             window.location.href = "../pages/home.html";
         }else{
             alert("Email ou senha incorretos.")
