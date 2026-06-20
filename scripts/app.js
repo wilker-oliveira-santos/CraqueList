@@ -1,31 +1,36 @@
-// ============================================================================
-// CRAQUEELIST - SISTEMA DE JOGADORES FAVORITOS
-// Lógica completa: CRUD, localStorage, API restcountries direto em JS
-// ============================================================================
 
-// ESTADO GLOBAL
-let currentUser = null;
-let players = [];
-let editingPlayerId = null;
-let deleteTarget = null;
-let countriesCache = null;
+let currentUser = null;      
+let players = [];            
+let editingPlayerId = null;  
+let deleteTarget = null;      
+let countriesCache = null;    
 
-// ============================================================================
-// INICIALIZAÇÃO
-// ============================================================================
+let countriesFallback = [
+    { name: "Brazil",    flag: "🇧🇷", flagImg: "https://flagcdn.com/w320/br.png", code: "BR" },
+    { name: "Argentina", flag: "🇦🇷", flagImg: "https://flagcdn.com/w320/ar.png", code: "AR" },
+    { name: "Spain",     flag: "🇪🇸", flagImg: "https://flagcdn.com/w320/es.png", code: "ES" },
+    { name: "France",    flag: "🇫🇷", flagImg: "https://flagcdn.com/w320/fr.png", code: "FR" },
+    { name: "Portugal",  flag: "🇵🇹", flagImg: "https://flagcdn.com/w320/pt.png", code: "PT" },
+    { name: "Germany",   flag: "🇩🇪", flagImg: "https://flagcdn.com/w320/de.png", code: "DE" },
+    { name: "England",   flag: "🏴",  flagImg: "https://flagcdn.com/w320/gb-eng.png", code: "GB" }
+];
 
-document.addEventListener('DOMContentLoaded', () => {
+
+document.addEventListener("DOMContentLoaded", function () {
     initializeApp();
 });
 
 function initializeApp() {
-    const loggedInUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (!loggedInUser) {
-        window.location.href = '../pages/login.html';
+    let userTexto = localStorage.getItem("currentUser");
+
+
+    if (!userTexto) {
+        window.location.href = "../pages/login.html";
         return;
     }
 
-    currentUser = loggedInUser;
+    currentUser = JSON.parse(userTexto);
+
     loadPlayers();
     updateProfileDisplay();
     renderCarousel();
@@ -33,114 +38,162 @@ function initializeApp() {
     populateCountryFilters();
 }
 
-// ============================================================================
-// CARREGAMENTO DE DADOS
-// ============================================================================
 
 function loadPlayers() {
-    const allPlayers = JSON.parse(localStorage.getItem('players')) || [];
-    players = allPlayers.filter(p => p.userId === currentUser.email);
+    let todosOsJogadores = JSON.parse(localStorage.getItem("players")) || [];
+    players = []; 
+
+
+    for (let i = 0; i < todosOsJogadores.length; i++) {
+        if (todosOsJogadores[i].userId === currentUser.email) {
+            players.push(todosOsJogadores[i]);
+        }
+    }
 }
 
 function savePlayers() {
-    const allPlayers = JSON.parse(localStorage.getItem('players')) || [];
-    const otherPlayers = allPlayers.filter(p => p.userId !== currentUser.email);
-    localStorage.setItem('players', JSON.stringify([...otherPlayers, ...players]));
-}
+    let todosOsJogadores = JSON.parse(localStorage.getItem("players")) || [];
 
-// ============================================================================
-// API RESTCOUNTRIES
-// ============================================================================
+
+    let jogadoresDeOutros = [];
+    for (let i = 0; i < todosOsJogadores.length; i++) {
+        if (todosOsJogadores[i].userId !== currentUser.email) {
+            jogadoresDeOutros.push(todosOsJogadores[i]);
+        }
+    }
+
+
+    let listaFinal = jogadoresDeOutros.concat(players);
+    localStorage.setItem("players", JSON.stringify(listaFinal));
+}
 
 async function getAllCountries() {
-    if (countriesCache) return countriesCache;
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
-        const response = await fetch('https://restcountries.com/v3.1/all?fields=name,flag,flags,cca2', {
-            signal: controller.signal
-        });
-        clearTimeout(timeout);
-        if (!response.ok) throw new Error('API error ' + response.status);
-        const data = await response.json();
-        countriesCache = data
-            .map(c => ({
-                name: c.name.common,
-                flag: c.flag || '',
-                flagImg: (c.flags && (c.flags.png || c.flags.svg)) || null,
-                flagAlt: (c.flags && c.flags.alt) || c.name.common,
-                code: c.cca2
-            }))
-            .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (countriesCache) {
         return countriesCache;
+    }
+
+    try {
+        let response = await fetch("https://restcountries.com/v3.1/all?fields=name,flag,flags,cca2");
+
+        if (!response.ok) {
+            throw new Error("Erro na API");
+        }
+
+        let data = await response.json();
+        let listaDePaises = [];
+
+        for (let i = 0; i < data.length; i++) {
+            let pais = data[i];
+
+            let imagem = null;
+            if (pais.flags) {
+                if (pais.flags.png) {
+                    imagem = pais.flags.png;
+                } else {
+                    imagem = pais.flags.svg;
+                }
+            }
+
+            listaDePaises.push({
+                name: pais.name.common,
+                flag: pais.flag || "",
+                flagImg: imagem,
+                code: pais.cca2
+            });
+        }
+
+        listaDePaises.sort(function (a, b) {
+            return a.name.localeCompare(b.name);
+        });
+
+        countriesCache = listaDePaises;
+        return countriesCache;
+
     } catch (error) {
-        console.error('Erro ao carregar países:', error);
-        return [
-            { name: 'Brazil',    flag: '🇧🇷', flagImg: 'https://flagcdn.com/w320/br.png', flagAlt: 'Brazil',    code: 'BR' },
-            { name: 'Argentina', flag: '🇦🇷', flagImg: 'https://flagcdn.com/w320/ar.png', flagAlt: 'Argentina', code: 'AR' },
-            { name: 'Spain',     flag: '🇪🇸', flagImg: 'https://flagcdn.com/w320/es.png', flagAlt: 'Spain',     code: 'ES' },
-            { name: 'France',    flag: '🇫🇷', flagImg: 'https://flagcdn.com/w320/fr.png', flagAlt: 'France',    code: 'FR' },
-            { name: 'Portugal',  flag: '🇵🇹', flagImg: 'https://flagcdn.com/w320/pt.png', flagAlt: 'Portugal',  code: 'PT' },
-            { name: 'Germany',   flag: '🇩🇪', flagImg: 'https://flagcdn.com/w320/de.png', flagAlt: 'Germany',   code: 'DE' },
-            { name: 'England',   flag: '🏴',  flagImg: 'https://flagcdn.com/w320/gb-eng.png', flagAlt: 'England', code: 'GB' },
-        ];
+        console.error("Erro ao carregar países:", error);
+        return countriesFallback;
     }
 }
 
-function buildFlagImgTag(country, height) {
+function buildFlagElement(country, altura) {
     if (country.flagImg) {
-        return '<img src="' + country.flagImg + '" alt="' + country.flagAlt + '" style="height:' + height + 'px;width:auto;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.25);">';
+        let img = document.createElement("img");
+        img.src = country.flagImg;
+        img.alt = country.name;
+        img.style.height = altura + "px";
+        img.style.width = "auto";
+        img.style.borderRadius = "4px";
+        return img;
+    } else {
+        let span = document.createElement("span");
+        span.style.fontSize = altura + "px";
+        span.textContent = country.flag;
+        return span;
     }
-    return '<span style="font-size:' + Math.round(height * 0.7) + 'px;">' + country.flag + '</span>';
 }
 
-// ============================================================================
-// EXIBIÇÃO DE PERFIL
-// ============================================================================
 
 function updateProfileDisplay() {
-    document.getElementById('userNameNav').textContent = currentUser.nome;
-    document.getElementById('profileName').textContent = currentUser.nome;
-    document.getElementById('profileEmail').textContent = currentUser.email;
+    document.getElementById("userNameNav").textContent = currentUser.nome;
+    document.getElementById("profileName").textContent = currentUser.nome;
+    document.getElementById("profileEmail").textContent = currentUser.email;
 }
 
-// ============================================================================
-// CARROSSEL
-// ============================================================================
 
 async function renderCarousel() {
-    const carouselContent = document.getElementById('carouselContent');
-    try {
-        const countries = await getAllCountries();
-        const featured = countries.slice(0, 5);
-        carouselContent.innerHTML = featured.map(function(country, index) {
-            var activeClass = index === 0 ? ' active' : '';
-            var flagTag = buildFlagImgTag(country, 110);
-            return '<div class="carousel-item' + activeClass + '">'
-                + '<div style="text-align:center;">'
-                + '<div style="margin-bottom:1rem;">' + flagTag + '</div>'
-                + '<div style="font-size:1.5rem;">' + country.name + '</div>'
-                + '</div>'
-                + '</div>';
-        }).join('');
-    } catch (error) {
-        console.error('Erro ao renderizar carrossel:', error);
-        carouselContent.innerHTML = '<div class="carousel-item active"><p>Erro ao carregar seleções</p></div>';
+    let carouselContent = document.getElementById("carouselContent");
+    carouselContent.innerHTML = ""; // limpa o que tinha antes
+
+    let countries = await getAllCountries();
+
+    for (let i = 0; i < 5 && i < countries.length; i++) {
+        let pais = countries[i];
+
+        // cria o item do carrossel
+        let item = document.createElement("div");
+        if (i === 0) {
+            item.className = "carousel-item active";
+        } else {
+            item.className = "carousel-item";
+        }
+
+        let wrapper = document.createElement("div");
+        wrapper.style.textAlign = "center";
+
+        let flagDiv = document.createElement("div");
+        flagDiv.style.marginBottom = "1rem";
+        flagDiv.appendChild(buildFlagElement(pais, 110));
+
+        let nomeDiv = document.createElement("div");
+        nomeDiv.style.fontSize = "1.5rem";
+        nomeDiv.textContent = pais.name;
+
+        wrapper.appendChild(flagDiv);
+        wrapper.appendChild(nomeDiv);
+        item.appendChild(wrapper);
+        carouselContent.appendChild(item);
     }
 }
 
-// ============================================================================
-// FILTROS
-// ============================================================================
-
 async function populateCountryFilters() {
-    const filterCountry = document.getElementById('filterCountry');
-    try {
-        const countries = await getAllCountries();
-        filterCountry.innerHTML = '<option value="">Todas as Seleções</option>'
-            + countries.map(c => '<option value="' + c.name + '">' + c.flag + ' ' + c.name + '</option>').join('');
-    } catch (error) {
-        console.error('Erro ao popular filtros:', error);
+    let filterCountry = document.getElementById("filterCountry");
+    filterCountry.innerHTML = "";
+
+
+    let optionTodas = document.createElement("option");
+    optionTodas.value = "";
+    optionTodas.textContent = "Todas as Seleções";
+    filterCountry.appendChild(optionTodas);
+
+    let countries = await getAllCountries();
+    for (let i = 0; i < countries.length; i++) {
+        let pais = countries[i];
+
+        let option = document.createElement("option");
+        option.value = pais.name;
+        option.textContent = pais.flag + " " + pais.name;
+        filterCountry.appendChild(option);
     }
 }
 
@@ -149,228 +202,364 @@ function filterPlayers() {
 }
 
 function getFilteredPlayers() {
-    const countryFilter = document.getElementById('filterCountry').value;
-    const positionFilter = document.getElementById('filterPosition').value;
-    return players.filter(player => {
-        const countryMatch = !countryFilter || player.country === countryFilter;
-        const positionMatch = !positionFilter || player.position === positionFilter;
-        return countryMatch && positionMatch;
-    });
+    let countryFilter = document.getElementById("filterCountry").value;
+    let positionFilter = document.getElementById("filterPosition").value;
+
+    let resultado = [];
+    for (let i = 0; i < players.length; i++) {
+        let jogador = players[i];
+        let combinaPais = (!countryFilter || jogador.country === countryFilter);
+        let combinaPosicao = (!positionFilter || jogador.position === positionFilter);
+
+        if (combinaPais && combinaPosicao) {
+            resultado.push(jogador);
+        }
+    }
+
+    return resultado;
 }
 
-// ============================================================================
-// RENDERIZAÇÃO DE JOGADORES
-// ============================================================================
 
 async function renderPlayersList() {
-    const playersList = document.getElementById('playersList');
-    const filteredPlayers = getFilteredPlayers();
+    let playersList = document.getElementById("playersList");
+    playersList.innerHTML = ""; // limpa o que tinha antes
+
+    let filteredPlayers = getFilteredPlayers();
 
     if (filteredPlayers.length === 0) {
-        playersList.innerHTML = '<div class="col-12"><div class="empty-state"><h3>Nenhum jogador encontrado</h3><p>Clique em "Adicionar Jogador" para começar sua lista!</p></div></div>';
+        let coluna = document.createElement("div");
+        coluna.className = "col-12";
+
+        let estadoVazio = document.createElement("div");
+        estadoVazio.className = "empty-state";
+
+        let titulo = document.createElement("h3");
+        titulo.textContent = "Nenhum jogador encontrado";
+
+        let texto = document.createElement("p");
+        texto.textContent = 'Clique em "Adicionar Jogador" para começar sua lista!';
+
+        estadoVazio.appendChild(titulo);
+        estadoVazio.appendChild(texto);
+        coluna.appendChild(estadoVazio);
+        playersList.appendChild(coluna);
         return;
     }
 
-    const countries = await getAllCountries();
-    const countryMap = {};
-    countries.forEach(c => { countryMap[c.name] = c; });
+    let countries = await getAllCountries();
 
-    const cardsHTML = filteredPlayers.map(function(player) {
-        var country = countryMap[player.country] || null;
-        var flagTag = country
-            ? buildFlagImgTag(country, 60)
-            : '<span style="font-size:2.5rem;">🏳️</span>';
+    for (let i = 0; i < filteredPlayers.length; i++) {
+        let player = filteredPlayers[i];
 
-        return '<div class="col-12 col-md-6">'
-            + '<div class="player-card">'
-            + '<div class="player-flag">' + flagTag + '</div>'
-            + '<div class="player-name">' + player.name + '</div>'
-            + '<div class="player-info"><strong>Seleção:</strong> ' + player.country + '</div>'
-            + '<div class="player-info"><strong>Posição:</strong> ' + player.position + '</div>'
-            + '<div class="player-actions">'
-            + '<button class="btn-sm btn-edit" onclick="openEditPlayerModal(\'' + player.id + '\')">Editar</button>'
-            + '<button class="btn-sm btn-delete" onclick="openDeleteConfirm(\'player\', \'' + player.id + '\')">Remover</button>'
-            + '</div>'
-            + '</div>'
-            + '</div>';
-    });
 
-    playersList.innerHTML = cardsHTML.join('');
+        let countryEncontrado = null;
+        for (let j = 0; j < countries.length; j++) {
+            if (countries[j].name === player.country) {
+                countryEncontrado = countries[j];
+                break;
+            }
+        }
+
+        let bandeira;
+        if (countryEncontrado) {
+            bandeira = buildFlagElement(countryEncontrado, 60);
+        } else {
+            bandeira = document.createElement("span");
+            bandeira.style.fontSize = "2.5rem";
+            bandeira.textContent = "🏳️";
+        }
+
+
+        let coluna = document.createElement("div");
+        coluna.className = "col-12 col-md-6";
+
+        let card = document.createElement("div");
+        card.className = "player-card";
+
+        let flagDiv = document.createElement("div");
+        flagDiv.className = "player-flag";
+        flagDiv.appendChild(bandeira);
+
+        let nomeDiv = document.createElement("div");
+        nomeDiv.className = "player-name";
+        nomeDiv.textContent = player.name;
+
+        let selecaoDiv = document.createElement("div");
+        selecaoDiv.className = "player-info";
+        let selecaoLabel = document.createElement("strong");
+        selecaoLabel.textContent = "Seleção:";
+        selecaoDiv.appendChild(selecaoLabel);
+        selecaoDiv.appendChild(document.createTextNode(" " + player.country));
+
+        let posicaoDiv = document.createElement("div");
+        posicaoDiv.className = "player-info";
+        let posicaoLabel = document.createElement("strong");
+        posicaoLabel.textContent = "Posição:";
+        posicaoDiv.appendChild(posicaoLabel);
+        posicaoDiv.appendChild(document.createTextNode(" " + player.position));
+
+        let acoesDiv = document.createElement("div");
+        acoesDiv.className = "player-actions";
+
+        let botaoEditar = document.createElement("button");
+        botaoEditar.className = "btn-sm btn-edit";
+        botaoEditar.textContent = "Editar";
+        botaoEditar.addEventListener("click", function () {
+            openEditPlayerModal(player.id);
+        });
+
+        let botaoRemover = document.createElement("button");
+        botaoRemover.className = "btn-sm btn-delete";
+        botaoRemover.textContent = "Remover";
+        botaoRemover.addEventListener("click", function () {
+            openDeleteConfirm("player", player.id);
+        });
+
+        acoesDiv.appendChild(botaoEditar);
+        acoesDiv.appendChild(botaoRemover);
+
+        card.appendChild(flagDiv);
+        card.appendChild(nomeDiv);
+        card.appendChild(selecaoDiv);
+        card.appendChild(posicaoDiv);
+        card.appendChild(acoesDiv);
+
+        coluna.appendChild(card);
+        playersList.appendChild(coluna);
+    }
 }
-
-// ============================================================================
-// MODAL - ADICIONAR/EDITAR JOGADOR
-// ============================================================================
 
 async function openAddPlayerModal() {
     editingPlayerId = null;
-    document.getElementById('playerModalTitle').textContent = 'Adicionar Jogador';
-    document.getElementById('playerForm').reset();
-    await populatePlayerCountrySelect();
-    new bootstrap.Modal(document.getElementById('playerModal')).show();
+    document.getElementById("playerModalTitle").textContent = "Adicionar Jogador";
+    document.getElementById("playerForm").reset();
+
+    await populatePlayerCountrySelect("");
+    let modal = new bootstrap.Modal(document.getElementById("playerModal"));
+    modal.show();
 }
 
 async function openEditPlayerModal(playerId) {
     editingPlayerId = playerId;
-    const player = players.find(p => p.id === playerId);
-    if (player) {
-        document.getElementById('playerModalTitle').textContent = 'Editar Jogador';
-        document.getElementById('playerName').value = player.name;
-        document.getElementById('playerPosition').value = player.position;
-        await populatePlayerCountrySelect(player.country);
-        new bootstrap.Modal(document.getElementById('playerModal')).show();
+
+    let player = null;
+    for (let i = 0; i < players.length; i++) {
+        if (players[i].id === playerId) {
+            player = players[i];
+            break;
+        }
     }
+
+    if (!player) return;
+
+    document.getElementById("playerModalTitle").textContent = "Editar Jogador";
+    document.getElementById("playerName").value = player.name;
+    document.getElementById("playerPosition").value = player.position;
+
+    await populatePlayerCountrySelect(player.country);
+    let modal = new bootstrap.Modal(document.getElementById("playerModal"));
+    modal.show();
 }
 
-async function populatePlayerCountrySelect(selectedCountry = '') {
-    const select = document.getElementById('playerCountry');
-    select.innerHTML = '<option value="">Carregando seleções...</option>';
-    try {
-        const countries = await getAllCountries();
-        select.innerHTML = '<option value="">Selecione uma seleção</option>'
-            + countries.map(c => {
-                var sel = selectedCountry === c.name ? ' selected' : '';
-                return '<option value="' + c.name + '"' + sel + '>' + c.flag + ' ' + c.name + '</option>';
-            }).join('');
-    } catch (error) {
-        console.error('Erro ao popular seleções:', error);
-        select.innerHTML = '<option value="">Erro ao carregar seleções</option>';
+async function populatePlayerCountrySelect(paisSelecionado) {
+    let select = document.getElementById("playerCountry");
+    select.innerHTML = "";
+
+    let optionVazia = document.createElement("option");
+    optionVazia.value = "";
+    optionVazia.textContent = "Selecione uma seleção";
+    select.appendChild(optionVazia);
+
+    let countries = await getAllCountries();
+    for (let i = 0; i < countries.length; i++) {
+        let pais = countries[i];
+
+        let option = document.createElement("option");
+        option.value = pais.name;
+        option.textContent = pais.flag + " " + pais.name;
+
+        if (pais.name === paisSelecionado) {
+            option.selected = true;
+        }
+
+        select.appendChild(option);
     }
 }
 
 function savePlayer() {
-    const name = document.getElementById('playerName').value.trim();
-    const country = document.getElementById('playerCountry').value;
-    const position = document.getElementById('playerPosition').value;
+    let name = document.getElementById("playerName").value.trim();
+    let country = document.getElementById("playerCountry").value;
+    let position = document.getElementById("playerPosition").value;
 
     if (!name || !country || !position) {
-        alert('Preencha todos os campos!');
+        alert("Preencha todos os campos!");
         return;
     }
 
     if (editingPlayerId) {
-        const player = players.find(p => p.id === editingPlayerId);
-        if (player) {
-            player.name = name;
-            player.country = country;
-            player.position = position;
+
+        for (let i = 0; i < players.length; i++) {
+            if (players[i].id === editingPlayerId) {
+                players[i].name = name;
+                players[i].country = country;
+                players[i].position = position;
+                break;
+            }
         }
     } else {
-        players.push({
+        let novoJogador = {
             id: Date.now().toString(),
             userId: currentUser.email,
-            name,
-            country,
-            position
-        });
+            name: name,
+            country: country,
+            position: position
+        };
+        players.push(novoJogador);
     }
 
     savePlayers();
     renderPlayersList();
-    bootstrap.Modal.getInstance(document.getElementById('playerModal')).hide();
+
+    let modal = bootstrap.Modal.getInstance(document.getElementById("playerModal"));
+    modal.hide();
 }
 
-// ============================================================================
-// MODAL - EDITAR PERFIL
-// ============================================================================
 
 function openEditProfileModal() {
-    document.getElementById('editName').value = currentUser.nome;
-    document.getElementById('editEmail').value = currentUser.email;
-    new bootstrap.Modal(document.getElementById('editProfileModal')).show();
+    document.getElementById("editName").value = currentUser.nome;
+    document.getElementById("editEmail").value = currentUser.email;
+
+    let modal = new bootstrap.Modal(document.getElementById("editProfileModal"));
+    modal.show();
 }
 
 function saveProfile() {
-    const newName = document.getElementById('editName').value.trim();
-    const newEmail = document.getElementById('editEmail').value.trim();
+    let newName = document.getElementById("editName").value.trim();
+    let newEmail = document.getElementById("editEmail").value.trim();
 
-    if (!newName || !newEmail) { alert('Preencha todos os campos!'); return; }
-    if (!newEmail.includes('@') || !newEmail.includes('.')) { alert('Digite um email válido!'); return; }
-
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    if (usuarios.some(u => u.email === newEmail && u.email !== currentUser.email)) {
-        alert('Este email já está cadastrado!');
+    if (!newName || !newEmail) {
+        alert("Preencha todos os campos!");
         return;
     }
 
-    const allUsers = JSON.parse(localStorage.getItem('usuarios')) || [];
-    const userIndex = allUsers.findIndex(u => u.email === currentUser.email);
-    if (userIndex !== -1) {
-        allUsers[userIndex].nome = newName;
-        allUsers[userIndex].email = newEmail;
-        localStorage.setItem('usuarios', JSON.stringify(allUsers));
+    if (!newEmail.includes("@") || !newEmail.includes(".")) {
+        alert("Digite um email válido!");
+        return;
     }
 
-    const oldEmail = currentUser.email;
+    let usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
+
+
+    for (let i = 0; i < usuarios.length; i++) {
+        if (usuarios[i].email === newEmail && usuarios[i].email !== currentUser.email) {
+            alert("Este email já está cadastrado!");
+            return;
+        }
+    }
+
+    for (let i = 0; i < usuarios.length; i++) {
+        if (usuarios[i].email === currentUser.email) {
+            usuarios[i].nome = newName;
+            usuarios[i].email = newEmail;
+            break;
+        }
+    }
+    localStorage.setItem("usuarios", JSON.stringify(usuarios));
+
+    let oldEmail = currentUser.email;
     currentUser.nome = newName;
     currentUser.email = newEmail;
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    localStorage.setItem("currentUser", JSON.stringify(currentUser));
 
-    const allPlayers = JSON.parse(localStorage.getItem('players')) || [];
-    allPlayers.forEach(p => { if (p.userId === oldEmail) p.userId = newEmail; });
-    localStorage.setItem('players', JSON.stringify(allPlayers));
+    let todosOsJogadores = JSON.parse(localStorage.getItem("players")) || [];
+    for (let i = 0; i < todosOsJogadores.length; i++) {
+        if (todosOsJogadores[i].userId === oldEmail) {
+            todosOsJogadores[i].userId = newEmail;
+        }
+    }
+    localStorage.setItem("players", JSON.stringify(todosOsJogadores));
 
     loadPlayers();
     updateProfileDisplay();
     renderPlayersList();
-    bootstrap.Modal.getInstance(document.getElementById('editProfileModal')).hide();
-    alert('Perfil atualizado com sucesso!');
+
+    let modal = bootstrap.Modal.getInstance(document.getElementById("editProfileModal"));
+    modal.hide();
+    alert("Perfil atualizado com sucesso!");
 }
 
-// ============================================================================
-// CONFIRMAÇÃO DE EXCLUSÃO
-// ============================================================================
+function openDeleteConfirm(tipo, id) {
+    deleteTarget = { type: tipo, id: id };
+    let mensagem = document.getElementById("confirmDeleteMessage");
 
-function openDeleteConfirm(type, id) {
-    deleteTarget = { type, id };
-    const message = document.getElementById('confirmDeleteMessage');
-    if (type === 'player') {
-        const player = players.find(p => p.id === id);
-        message.textContent = 'Tem certeza que deseja remover o jogador "' + player.name + '" da sua lista?';
-    } else if (type === 'account') {
-        message.textContent = 'Tem certeza que deseja deletar sua conta? Esta ação não pode ser desfeita!';
+    if (tipo === "player") {
+        let player = null;
+        for (let i = 0; i < players.length; i++) {
+            if (players[i].id === id) {
+                player = players[i];
+                break;
+            }
+        }
+        mensagem.textContent = 'Tem certeza que deseja remover o jogador "' + player.name + '" da sua lista?';
+    } else if (tipo === "account") {
+        mensagem.textContent = "Tem certeza que deseja deletar sua conta? Esta ação não pode ser desfeita!";
     }
-    new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
+
+    let modal = new bootstrap.Modal(document.getElementById("confirmDeleteModal"));
+    modal.show();
 }
 
 function confirmDelete() {
     if (!deleteTarget) return;
-    if (deleteTarget.type === 'player') {
-        players = players.filter(p => p.id !== deleteTarget.id);
+
+    if (deleteTarget.type === "player") {
+        let novaLista = [];
+        for (let i = 0; i < players.length; i++) {
+            if (players[i].id !== deleteTarget.id) {
+                novaLista.push(players[i]);
+            }
+        }
+        players = novaLista;
         savePlayers();
         renderPlayersList();
-    } else if (deleteTarget.type === 'account') {
+    } else if (deleteTarget.type === "account") {
         deleteAccountConfirmed();
     }
-    bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+
+    let modal = bootstrap.Modal.getInstance(document.getElementById("confirmDeleteModal"));
+    modal.hide();
     deleteTarget = null;
 }
-
-// ============================================================================
-// EXCLUSÃO DE CONTA
-// ============================================================================
-
 function deleteAccount() {
-    openDeleteConfirm('account', null);
+    openDeleteConfirm("account", null);
 }
 
 function deleteAccountConfirmed() {
-    const usuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
-    localStorage.setItem('usuarios', JSON.stringify(usuarios.filter(u => u.email !== currentUser.email)));
 
-    const allPlayers = JSON.parse(localStorage.getItem('players')) || [];
-    localStorage.setItem('players', JSON.stringify(allPlayers.filter(p => p.userId !== currentUser.email)));
+    let usuarios = JSON.parse(localStorage.getItem("usuarios")) || [];
+    let usuariosRestantes = [];
+    for (let i = 0; i < usuarios.length; i++) {
+        if (usuarios[i].email !== currentUser.email) {
+            usuariosRestantes.push(usuarios[i]);
+        }
+    }
+    localStorage.setItem("usuarios", JSON.stringify(usuariosRestantes));
 
-    localStorage.removeItem('currentUser');
-    alert('Conta deletada com sucesso!');
-    window.location.href = '../index.html';
+    let todosOsJogadores = JSON.parse(localStorage.getItem("players")) || [];
+    let jogadoresRestantes = [];
+    for (let i = 0; i < todosOsJogadores.length; i++) {
+        if (todosOsJogadores[i].userId !== currentUser.email) {
+            jogadoresRestantes.push(todosOsJogadores[i]);
+        }
+    }
+    localStorage.setItem("players", JSON.stringify(jogadoresRestantes));
+
+    localStorage.removeItem("currentUser");
+    alert("Conta deletada com sucesso!");
+    window.location.href = "../index.html";
 }
 
-// ============================================================================
-// LOGOUT
-// ============================================================================
-
 function logout() {
-    localStorage.removeItem('currentUser');
-    window.location.href = '../pages/login.html';
+    localStorage.removeItem("currentUser");
+    window.location.href = "../pages/login.html";
 }
