@@ -301,6 +301,7 @@ a{
 .modal-confirm {
     background-color: var(--cor-form);
     border: 1px solid var(--cor-borda);
+    pointer-events: auto;
 }
 
 .modal-title {
