@@ -340,6 +340,10 @@ a{
     margin-bottom: 1rem;
 }
 
+option{
+    background-color: #0e1512;
+}
+
 @media (max-width: 768px) {
 
     .carousel-item {

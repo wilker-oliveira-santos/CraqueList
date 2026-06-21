@@ -1,4 +1,3 @@
-
 let currentUser = null;      
 let players = [];            
 let editingPlayerId = null;  
@@ -174,6 +173,22 @@ async function renderCarousel() {
         item.appendChild(wrapper);
         carouselContent.appendChild(item);
     }
+
+    // Inicializa o carrossel do Bootstrap manualmente, agora que os slides existem.
+    // Necessário porque os itens são montados de forma assíncrona (depois do fetch
+    // de países). Se deixássemos data-bs-ride="carousel" no HTML, o Bootstrap
+    // inicializaria o componente vazio antes dos slides chegarem, e o carrossel
+    // ficaria travado sem girar.
+    let carouselEl = document.getElementById("carouselSelecoes");
+    let existingInstance = bootstrap.Carousel.getInstance(carouselEl);
+    if (existingInstance) {
+        existingInstance.dispose();
+    }
+    new bootstrap.Carousel(carouselEl, {
+        interval: 3000,
+        ride: "carousel",
+        wrap: true
+    });
 }
 
 async function populateCountryFilters() {
