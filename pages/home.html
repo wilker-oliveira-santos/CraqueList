@@ -8,11 +8,10 @@
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-    <!-- NAVBAR -->
+
     <nav class="navbar navbar-custom">
     <div class="container-fluid d-flex justify-content-between align-items-center">
         <img src="../image/logo.png" alt="" class="logo">
-        caqaaa
 
         <div class="d-flex gap-3 align-items-center">
             <span class="nav-link mb-0" id="userNameNav">Usuário</span>
@@ -21,9 +20,7 @@
     </div>
     </nav>
 
-    <!-- CONTAINER PRINCIPAL -->
     <main class="container mt-5">
-        <!-- PERFIL -->
         <section class="profile-section" aria-label="Perfil do usuário">
             <div class="profile-info">
                 <div class="profile-data">
@@ -34,12 +31,11 @@
             </div>
         </section>
 
-        <!-- CARROSSEL DE SELEÇÕES -->
         <section class="carousel-section" aria-label="Seleções em destaque">
             <h5 class="mb-3">🌍 Seleções em Destaque</h5>
             <div id="carouselSelecoes" class="carousel slide">
                 <div class="carousel-inner" id="carouselContent">
-                    <!-- Preenchido por JS -->
+
                 </div>
                 <button class="carousel-control-prev" type="button" data-bs-target="#carouselSelecoes" data-bs-slide="prev">
                     <span class="carousel-control-prev-icon"></span>
@@ -50,7 +46,6 @@
             </div>
         </section>
 
-        <!-- FILTROS -->
         <section class="filters-section" aria-label="Filtros de jogadores">
             <div class="row g-3">
                 <div class="col-12 col-md-6">
@@ -73,16 +68,13 @@
             </div>
         </section>
 
-        <!-- BOTÃO ADICIONAR -->
         <button class="btn-add-player" onclick="openAddPlayerModal()">+ Adicionar Jogador</button>
 
-        <!-- LISTA DE JOGADORES -->
         <section id="playersList" class="row g-4" aria-label="Lista de jogadores">
-            <!-- Preenchido por JS -->
+
         </section>
     </main>
 
-    <!-- MODAL ADICIONAR/EDITAR JOGADOR -->
     <div class="modal fade" id="playerModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -123,7 +115,6 @@
         </div>
     </div>
 
-    <!-- MODAL EDITAR PERFIL -->
     <div class="modal fade" id="editProfileModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -152,7 +143,6 @@
         </div>
     </div>
 
-    <!-- MODAL CONFIRMAÇÃO DE EXCLUSÃO -->
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-confirm">

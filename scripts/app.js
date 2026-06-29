@@ -2,7 +2,7 @@ let currentUser = null;
 let players = [];            
 let editingPlayerId = null;  
 let deleteTarget = null;      
-let countriesCache = null;    
+let countriesPromise = null;
 
 let countriesFallback = [
     { name: "Brazil",    flag: "🇧🇷", flagImg: "https://flagcdn.com/w320/br.png", code: "BR" },
@@ -66,12 +66,7 @@ function savePlayers() {
     localStorage.setItem("players", JSON.stringify(listaFinal));
 }
 
-async function getAllCountries() {
-
-    if (countriesCache) {
-        return countriesCache;
-    }
-
+async function _fetchCountries() {
     try {
         let response = await fetch("https://restcountries.com/v3.1/all?fields=name,flag,flags,cca2");
 
@@ -106,13 +101,19 @@ async function getAllCountries() {
             return a.name.localeCompare(b.name);
         });
 
-        countriesCache = listaDePaises;
-        return countriesCache;
+        return listaDePaises;
 
     } catch (error) {
         console.error("Erro ao carregar países:", error);
         return countriesFallback;
     }
+}
+
+function getAllCountries() {
+    if (!countriesPromise) {
+        countriesPromise = _fetchCountries();
+    }
+    return countriesPromise;
 }
 
 function buildFlagElement(country, altura) {
@@ -142,14 +143,13 @@ function updateProfileDisplay() {
 
 async function renderCarousel() {
     let carouselContent = document.getElementById("carouselContent");
-    carouselContent.innerHTML = ""; // limpa o que tinha antes
+    carouselContent.innerHTML = ""; 
 
     let countries = await getAllCountries();
 
     for (let i = 0; i < 5 && i < countries.length; i++) {
         let pais = countries[i];
 
-        // cria o item do carrossel
         let item = document.createElement("div");
         if (i === 0) {
             item.className = "carousel-item active";
@@ -174,11 +174,6 @@ async function renderCarousel() {
         carouselContent.appendChild(item);
     }
 
-    // Inicializa o carrossel do Bootstrap manualmente, agora que os slides existem.
-    // Necessário porque os itens são montados de forma assíncrona (depois do fetch
-    // de países). Se deixássemos data-bs-ride="carousel" no HTML, o Bootstrap
-    // inicializaria o componente vazio antes dos slides chegarem, e o carrossel
-    // ficaria travado sem girar.
     let carouselEl = document.getElementById("carouselSelecoes");
     let existingInstance = bootstrap.Carousel.getInstance(carouselEl);
     if (existingInstance) {
@@ -237,7 +232,7 @@ function getFilteredPlayers() {
 
 async function renderPlayersList() {
     let playersList = document.getElementById("playersList");
-    playersList.innerHTML = ""; // limpa o que tinha antes
+    playersList.innerHTML = ""; 
 
     let filteredPlayers = getFilteredPlayers();
 

@@ -1,5 +1,3 @@
-
-
 const FormLogin = document.querySelector("#ContainerFormLogin");
 
 function getUsuarios() {

@@ -154,15 +154,22 @@ a{
 
 .carousel-item {
     height: 300px;
-    background: linear-gradient(135deg, var(--verde), var(--cor-form));
+    background: #7cb96c;
     border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 1px solid var(--cor-borda);
+    text-align: center;
     font-size: 2rem;
     font-weight: 700;
-    text-align: center;
-    border: 1px solid var(--cor-borda);
+
+}
+
+
+.carousel-item > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 
